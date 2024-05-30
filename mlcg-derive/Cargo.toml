@@ -1,0 +1,16 @@
+[package]
+name = "mlcg-derive"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Mindustry Logic Code Generator"
+repository.workspace = true
+keywords.workspace = true
+license.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "2"
+quote = "1"

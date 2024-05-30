@@ -1,0 +1,12 @@
+[package]
+name = "mlcg"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+description = "Mindustry Logic Code Generator"
+repository.workspace = true
+keywords.workspace = true
+license.workspace = true
+
+[dependencies]
+mlcg-derive.workspace = true

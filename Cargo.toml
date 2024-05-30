@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = ["mlcg", "mlcg-derive"]
+
+[profile.release]
+lto = "thin"
+strip = true
+
+[workspace.package]
+edition = "2021"
+keywords = ["mindustry"]
+license = "GPLv3"
+version = "0.1.0"
+repository = "https://github.com/yiyue-reimu/mlcg"
+authors = ["yiyue-reimu"]
+
+[workspace.dependencies.mlcg-derive]
+version = "0.1.0"
+path = "./mlcg-derive"

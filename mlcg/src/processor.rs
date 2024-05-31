@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{command::Command, r#ref::Ref, types::Type, String};
+use crate::{command::Command, eval::Eval, r#ref::Ref, types::Type, String};
 
 #[derive(Default)]
 pub struct Processor {
@@ -37,11 +37,11 @@ impl RawProcessor {
     pub(crate) fn alloc_name(&mut self) -> String {
         let idx = self.alloc;
         self.alloc += 1;
-        format!("v{}", idx).into()
+        format!("v{}", idx).eval()
     }
 
-    pub(crate) fn new_variable(&mut self, name: impl Into<String>) -> VariableIdx {
-        let name = name.into();
+    pub(crate) fn new_variable(&mut self, name: impl Eval<String>) -> VariableIdx {
+        let name = name.eval();
         self.variables.push(name);
         VariableIdx(self.variables.len() - 1)
     }
@@ -51,7 +51,7 @@ impl RawProcessor {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct VariableIdx(usize);
 
 impl From<usize> for VariableIdx {
@@ -60,11 +60,27 @@ impl From<usize> for VariableIdx {
     }
 }
 
+#[cfg(target_pointer_width = "64")]
+const TARGET_POINTER_WIDTH: usize = 64;
+#[cfg(target_pointer_width = "32")]
+const TARGET_POINTER_WIDTH: usize = 32;
+
+// there are some magic_number: @unit @counter @thisx @thisy @self...
+// 4 bit is kept for them
+pub(crate) const AT_UNIT_IDX: VariableIdx = VariableIdx(0b0000 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const UNIT: String = String::Static("@unit");
+pub(crate) const AT_COUNT_IDX: VariableIdx = VariableIdx(0b0001 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const COUNT: String = String::Static("@count");
+
 impl std::ops::Index<VariableIdx> for RawProcessor {
     type Output = String;
 
     fn index(&self, index: VariableIdx) -> &Self::Output {
-        &self.variables[index.0]
+        match index {
+            AT_UNIT_IDX => &UNIT,
+            AT_COUNT_IDX => &COUNT,
+            _ => &self.variables[index.0],
+        }
     }
 }
 

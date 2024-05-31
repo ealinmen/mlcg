@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-#[derive(Debug, Clone)]
+use crate::eval::Eval;
+
+#[derive(Eval, Debug, Clone)]
 pub enum String {
     Rc(Rc<std::string::String>),
     Static(&'static str),
@@ -12,21 +14,21 @@ impl String {
     }
 }
 
-impl From<&'static str> for String {
-    fn from(v: &'static str) -> Self {
-        Self::Static(v)
+impl Eval<String> for &'static str {
+    fn eval(self) -> String {
+        String::Static(self)
     }
 }
 
-impl From<std::string::String> for String {
-    fn from(value: std::string::String) -> Self {
-        Self::Rc(value.into())
+impl Eval<String> for std::string::String {
+    fn eval(self) -> String {
+        String::Rc(self.into())
     }
 }
 
-impl From<Rc<std::string::String>> for String {
-    fn from(v: Rc<std::string::String>) -> Self {
-        Self::Rc(v)
+impl Eval<String> for Rc<std::string::String> {
+    fn eval(self) -> String {
+        String::Rc(self)
     }
 }
 

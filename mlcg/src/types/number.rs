@@ -28,6 +28,15 @@ impl Type for Number {
     }
 }
 
+impl Eval<String> for Number {
+    fn eval(self) -> String {
+        match self {
+            Number::Immediate(f) => String::new(f),
+            Number::Variable(s) => s,
+        }
+    }
+}
+
 impl<F> Eval<Number> for F
 where
     f64: From<F>,
@@ -50,32 +59,31 @@ macro_rules! binary_ops_impl {
                 use crate::command::*;
                 let processor = self.core;
 
-                let n1 = self.eval();
-                let n2 = rhs.eval();
-                let (l, r) = match (n1.remake(), n2.remake()) {
+                let n1: Number = self.eval();
+                let n2: Number = rhs.eval();
+                match (n1.remake(), n2.remake()) {
                     (Number::Immediate(a), Number::Immediate(b)) => {
-                        return processor.make_ref(
+                        processor.make_ref(
                             processor
                                 .borrow_mut()
                                 .new_variable(a.$method(b).to_string()),
                         )
                     }
-                    (Number::Immediate(l), Number::Variable(r)) => (crate::String::new(l), r),
-                    (Number::Variable(l), Number::Immediate(r)) => (l, crate::String::new(r)),
-                    (Number::Variable(l), Number::Variable(r)) => (l, r),
-                };
-                let result = {
-                    let mut processor = processor.borrow_mut();
-                    let result = processor.alloc_name();
-                    processor.push_command(Operation::Binary {
-                        op: Op::$trait,
-                        result: result.clone(),
-                        lhs: l,
-                        rhs: r,
-                    });
-                    processor.new_variable(result)
-                };
-                processor.make_ref(result)
+                    (l, r) => {
+                        let result = {
+                        let mut processor = processor.borrow_mut();
+                        let result = processor.alloc_name();
+                            processor.push_command(Operation::Binary {
+                                op: Op::$trait,
+                                result: result.clone(),
+                                lhs: l.eval(),
+                                rhs: r.eval(),
+                            });
+                            processor.new_variable(result)
+                        };
+                        processor.make_ref(result)
+                    }
+                }
             }
         }
         )*

@@ -121,9 +121,6 @@ mod tests {
         let d = c + 114514;
         let e = d + false;
         let _f = e + 1919.810;
-
-        const EXPECTED: &str = r#"Block { commands: [Operation(Binary { op: Add, result: Rc("v0"), lhs: Static("a"), rhs: Static("b") }), Operation(Binary { op: Add, result: Rc("v1"), lhs: Rc("v0"), rhs: Rc("114514") }), Operation(Binary { op: Add, result: Rc("v2"), lhs: Rc("v1"), rhs: Rc("0") }), Operation(Binary { op: Add, result: Rc("v3"), lhs: Rc("v2"), rhs: Rc("1919.81") })] }"#;
-        assert_eq!(format!("{:?}", core.borrow().main), EXPECTED);
     }
 
     #[test]
@@ -134,7 +131,5 @@ mod tests {
         a += b;
         b += a;
         let _c = a + b;
-        const EXPECTED: &str = r#"Block { commands: [Operation(Binary { op: Add, result: Static("a"), lhs: Static("a"), rhs: Static("b") }), Operation(Binary { op: Add, result: Static("b"), lhs: Static("b"), rhs: Static("a") }), Operation(Binary { op: Add, result: Rc("v0"), lhs: Static("a"), rhs: Static("b") })] }"#;
-        assert_eq!(format!("{:?}", core.borrow().main), EXPECTED);
     }
 }

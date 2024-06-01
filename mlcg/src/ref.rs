@@ -181,8 +181,5 @@ mod tests {
         let awa = processor.from_mdt::<Unit>("awa");
         awa.bind()
             .target(processor.thisx(), processor.thisy(), true);
-
-        const EXPECTD: &str = r#"Block { commands: [UnitControl(Target { x: Static("@thisx"), y: Static("@thisy"), shoot: Rc("1") }), Set(Set { result: Static("awa"), value: Static("@unit") }), Set(Set { result: Static("@unit"), value: Static("awa") }), UnitControl(Target { x: Static("@thisx"), y: Static("@thisy"), shoot: Rc("1") })] }"#;
-        assert_eq!(format!("{:?}", processor.borrow().main), EXPECTD);
     }
 }

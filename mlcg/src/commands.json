@@ -1,0 +1,200 @@
+{
+    "read": [
+        "dst",
+        "from",
+        "at"
+    ],
+    "write": [
+        "src",
+        "to",
+        "at"
+    ],
+    "draw": {
+        "padding": 6,
+        "Clear": [
+            "r",
+            "g",
+            "b"
+        ],
+        "Color": [
+            "r",
+            "g",
+            "b",
+            "a"
+        ],
+        "col": [
+            "color"
+        ],
+        "stroke": [
+            "width"
+        ],
+        "line": [
+            "x1",
+            "y1",
+            "x2",
+            "y2"
+        ],
+        "rect": [
+            "x",
+            "y",
+            "width",
+            "height"
+        ],
+        "lineRect": [
+            "x",
+            "y",
+            "width",
+            "height"
+        ],
+        "poly": [
+            "x",
+            "y",
+            "sides",
+            "radius",
+            "rotation"
+        ],
+        "linePoly": [
+            "x",
+            "y",
+            "sides",
+            "radius",
+            "rotation"
+        ],
+        "triangle": [
+            "x1",
+            "y1",
+            "x2",
+            "y2",
+            "x3",
+            "y3"
+        ],
+        "image": [
+            "x",
+            "y",
+            "image",
+            "size",
+            "rotation"
+        ]
+    },
+    "print": [
+        "text"
+    ],
+    "drawflush": [
+        "to"
+    ],
+    "printflush": [
+        "to"
+    ],
+    "getlink": [
+        "to"
+    ],
+    "control": {
+        "padding": 5,
+        "enable": [
+            "of",
+            "enable"
+        ],
+        "shoot": [
+            "of",
+            "x",
+            "y",
+            "shoot"
+        ],
+        "shootp": [
+            "of",
+            "at",
+            "shoot"
+        ],
+        "config": [
+            "of",
+            "config"
+        ],
+        "color": [
+            "of",
+            "to"
+        ]
+    },
+    "set": [
+        "result",
+        "value"
+    ],
+    "op": [
+        "op",
+        "result",
+        "lhs",
+        "rhs"
+    ],
+    "ubind": [
+        "ty"
+    ],
+    "ucontrol": {
+        "idle": [],
+        "stop": [],
+        "move": [
+            "x",
+            "y"
+        ],
+        "approach": [
+            "x",
+            "y",
+            "radius"
+        ],
+        "pathFind": [
+            "x",
+            "y"
+        ],
+        "autoPathFind": [],
+        "boost": [],
+        "target": [
+            "x",
+            "y",
+            "shoot"
+        ],
+        "targetp": [
+            "unit",
+            "shoot"
+        ],
+        "itemDrop": [
+            "to",
+            "amount"
+        ],
+        "itemTake": [
+            "from",
+            "item",
+            "amount"
+        ],
+        "payDrop": [],
+        "payTake": [
+            "take_units"
+        ],
+        "payEnter": [],
+        "mine": [
+            "x",
+            "y"
+        ],
+        "flag": [
+            "value"
+        ],
+        "build": [
+            "x",
+            "y",
+            "block",
+            "rotation",
+            "config"
+        ],
+        "getblock": [
+            "x",
+            "y",
+            "ty",
+            "building",
+            "floor"
+        ],
+        "within": [
+            "x",
+            "y",
+            "radius",
+            "result"
+        ],
+        "unbind": []
+    }
+}

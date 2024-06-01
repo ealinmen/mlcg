@@ -4,7 +4,11 @@ use crate::{
     command::Command,
     eval::Eval,
     r#ref::Ref,
-    types::{number::Number, Type},
+    types::{
+        number::Number,
+        unit::{Unit, Units},
+        Type,
+    },
     String,
 };
 
@@ -32,6 +36,20 @@ impl Processor {
 
     pub(crate) fn is_same_core(&self, rhs: &Self) -> bool {
         (self as *const Processor).eq(&(rhs as _))
+    }
+
+    pub fn unit_bind<U: Units>(&self) {
+        self.borrow_mut()
+            .push_command(crate::command::ubind::Ubind {
+                ty: U::class_name().eval(),
+            });
+    }
+
+    /// # Note
+    ///
+    /// the `@unit` may is not binded yet
+    pub fn unit(&self) -> Ref<'_, Unit> {
+        self.make_ref(AT_UNIT_IDX)
     }
 
     /// `@thisx` context variable

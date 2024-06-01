@@ -2,10 +2,15 @@ use std::marker::PhantomData;
 
 use crate::{
     abilities::{Shoot, Target},
-    command::{Control, Set, UnitControl},
+    command,
     eval::{Eval, WithCore},
     processor::{Processor, VariableIdx},
-    types::{building::Buildings, number::Number, unit::Unit, Type},
+    types::{
+        building::Buildings,
+        number::Number,
+        unit::{Unit, Units},
+        Type,
+    },
     String,
 };
 
@@ -46,7 +51,7 @@ where
                 name
             }
         };
-        let set = Set {
+        let set = command::set::Set {
             result: result.clone(),
             value: self.core.borrow()[self.idx].clone(),
         };
@@ -59,11 +64,27 @@ where
     }
 
     pub fn set_to(&self, value: impl Eval<T>) {
-        let command = Set {
+        let command = command::set::Set {
             result: self.core.borrow()[self.idx].clone(),
             value: value.eval().eval(),
         };
         self.core.borrow_mut().push_command(command)
+    }
+
+    pub fn cast<T2: Type>(self) -> Ref<'a, T2> {
+        Ref {
+            core: self.core,
+            idx: self.idx,
+            _type: PhantomData,
+        }
+    }
+}
+
+impl<'a, U: Units> Ref<'a, Unit<U>> {
+    pub fn bind(&self) -> Ref<'a, Unit> {
+        let s = self.cast::<Unit>();
+        self.core.unit().set_to(s);
+        s
     }
 }
 
@@ -71,21 +92,23 @@ impl<'a> Ref<'a, Unit> {
     #[doc(alias = "shoot")]
     pub fn target(&self, x: impl Eval<Number>, y: impl Eval<Number>, shoot: impl Eval<Number>) {
         assert_same_core!(self, x, y, shoot);
-        let command = UnitControl::Target {
+        let command = command::ucontrol::Target {
             x: x.eval().eval(),
             y: y.eval().eval(),
             shoot: shoot.eval().eval(),
         };
+        let command = command::ucontrol::Ucontrol::from(command);
         self.core.borrow_mut().push_command(command);
     }
 
     #[doc(alias = "shootp")]
     pub fn targetp<At: Target>(&self, at: impl Eval<At>, shoot: impl Eval<Number>) {
         assert_same_core!(self, at, shoot);
-        let command = UnitControl::Targetp {
-            at: at.eval().eval(),
+        let command = command::ucontrol::Targetp {
+            unit: at.eval().eval(),
             shoot: shoot.eval().eval(),
         };
+        let command = command::ucontrol::Ucontrol::from(command);
         self.core.borrow_mut().push_command(command)
     }
 }
@@ -97,23 +120,23 @@ where
     #[doc(alias = "target")]
     pub fn shoot(&self, x: impl Eval<Number>, y: impl Eval<Number>, shoot: impl Eval<Number>) {
         assert_same_core!(self, x, y, shoot);
-        let command = Control::Shoot {
-            of: (*self).eval(),
+        let command = command::ucontrol::Target {
             x: x.eval().eval(),
             y: y.eval().eval(),
             shoot: shoot.eval().eval(),
         };
+        let command = command::ucontrol::Ucontrol::from(command);
         self.core.borrow_mut().push_command(command)
     }
 
     #[doc(alias = "targetp")]
     pub fn shootp<At: Target>(&self, at: impl Eval<At>, shoot: impl Eval<Number>) {
         assert_same_core!(self, at, shoot);
-        let command = Control::Shootp {
-            of: (*self).eval(),
-            at: at.eval().eval(),
+        let command = command::ucontrol::Targetp {
+            unit: at.eval().eval(),
             shoot: shoot.eval().eval(),
         };
+        let command = command::ucontrol::Ucontrol::from(command);
         self.core.borrow_mut().push_command(command)
     }
 }
@@ -154,12 +177,12 @@ mod tests {
         let at_unit = processor.unit();
         at_unit.target(processor.thisx(), processor.thisy(), true);
 
-        at_unit.save_as("awa");
-
+        let _awa = at_unit.save_as("awa");
         let awa = processor.from_mdt::<Unit>("awa");
+        awa.bind()
+            .target(processor.thisx(), processor.thisy(), true);
 
-        awa.set_to(at_unit);
-
-        dbg!(&processor.borrow().main);
+        const EXPECTD: &str = r#"Block { commands: [UnitControl(Target { x: Static("@thisx"), y: Static("@thisy"), shoot: Rc("1") }), Set(Set { result: Static("awa"), value: Static("@unit") }), Set(Set { result: Static("@unit"), value: Static("awa") }), UnitControl(Target { x: Static("@thisx"), y: Static("@thisy"), shoot: Rc("1") })] }"#;
+        assert_eq!(format!("{:?}", processor.borrow().main), EXPECTD);
     }
 }

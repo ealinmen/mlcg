@@ -49,8 +49,8 @@ macro_rules! binary_ops_impl {
                 let result = {
                     let mut processor = processor.borrow_mut();
                     let result = processor.alloc_name();
-                    processor.push_command(Operation::Binary {
-                        op: Op::$trait,
+                    processor.push_command(op::Op {
+                        op: stringify!($method).eval(),
                         result: result.clone(),
                         lhs: lhs.eval(),
                         rhs: rhs.eval(),
@@ -62,7 +62,7 @@ macro_rules! binary_ops_impl {
         }
         )*
     };
-    ($($trait:ident($op:ident) => $method:ident,)*) => {
+    ($($trait:ident($op:ident) => $method:ident($op_method:ident),)*) => {
         $(
         impl<N> std::ops::$trait<N> for Ref<'_, Number>
         where
@@ -77,8 +77,8 @@ macro_rules! binary_ops_impl {
                 let rhs: Number = rhs.eval();
 
                 let mut processor = processor.borrow_mut();
-                processor.push_command(Operation::Binary {
-                    op: Op::$op,
+                processor.push_command(op::Op {
+                    op: stringify!($op_method).eval(),
                     result: lhs.clone(),
                     lhs: lhs.eval(),
                     rhs: rhs.eval(),
@@ -98,11 +98,11 @@ binary_ops_impl! {
 }
 
 binary_ops_impl! {
-    AddAssign(Add) => add_assign,
-    SubAssign(Sub) => sub_assign,
-    MulAssign(Mul) => mul_assign,
-    DivAssign(Div) => div_assign,
-    RemAssign(Rem) => rem_assign,
+    AddAssign(Add) => add_assign(add),
+    SubAssign(Sub) => sub_assign(sub),
+    MulAssign(Mul) => mul_assign(mul),
+    DivAssign(Div) => div_assign(div),
+    RemAssign(Rem) => rem_assign(rem),
 }
 
 #[cfg(test)]

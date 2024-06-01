@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
 use crate::{
-    abilities::Shoot,
-    command::Set,
-    eval::Eval,
+    abilities::{Shoot, Target},
+    command::{Control, Set, UnitControl},
+    eval::{Eval, WithCore},
     processor::{Processor, VariableIdx},
-    types::{building::Buildings, number::Number, unit::Units, Type},
+    types::{building::Buildings, number::Number, unit::Unit, Type},
     String,
 };
 
@@ -16,6 +16,20 @@ where
     pub(crate) core: &'a Processor,
     pub(crate) idx: VariableIdx,
     pub(crate) _type: PhantomData<T>,
+}
+
+macro_rules! assert_same_core {
+    ($($refs:tt),*) => {
+        assert_same_core!(@rec $($refs),*)
+    };
+    (@rec $a:tt) => {};
+    (@rec $a:tt, $b:tt $(,$rest:tt)*) => {
+        match ($a.core(), $b.core()) {
+            (Some(a_core), Some(b_core)) => assert!(a_core.is_same_core(b_core), "refernces must be in same processor!"),
+            _ => {}
+        }
+        assert_same_core!(@rec $b $(,$rest)*)
+    }
 }
 
 impl<'a, T> Ref<'a, T>
@@ -43,20 +57,36 @@ where
         };
         self.core.make_ref(result)
     }
+
+    pub fn set_to(&self, value: impl Eval<T>) {
+        let command = Set {
+            result: self.core.borrow()[self.idx].clone(),
+            value: value.eval().eval(),
+        };
+        self.core.borrow_mut().push_command(command)
+    }
 }
 
-impl<'a, T> Ref<'a, T>
-where
-    T: Type + Shoot + Units,
-{
+impl<'a> Ref<'a, Unit> {
     #[doc(alias = "shoot")]
     pub fn target(&self, x: impl Eval<Number>, y: impl Eval<Number>, shoot: impl Eval<Number>) {
-        todo!()
+        assert_same_core!(self, x, y, shoot);
+        let command = UnitControl::Target {
+            x: x.eval().eval(),
+            y: y.eval().eval(),
+            shoot: shoot.eval().eval(),
+        };
+        self.core.borrow_mut().push_command(command);
     }
 
     #[doc(alias = "shootp")]
-    pub fn targetp(&self, target: impl Eval<()>, shoot: impl Eval<Number>) {
-        todo!()
+    pub fn targetp<At: Target>(&self, at: impl Eval<At>, shoot: impl Eval<Number>) {
+        assert_same_core!(self, at, shoot);
+        let command = UnitControl::Targetp {
+            at: at.eval().eval(),
+            shoot: shoot.eval().eval(),
+        };
+        self.core.borrow_mut().push_command(command)
     }
 }
 
@@ -66,12 +96,25 @@ where
 {
     #[doc(alias = "target")]
     pub fn shoot(&self, x: impl Eval<Number>, y: impl Eval<Number>, shoot: impl Eval<Number>) {
-        todo!()
+        assert_same_core!(self, x, y, shoot);
+        let command = Control::Shoot {
+            of: (*self).eval(),
+            x: x.eval().eval(),
+            y: y.eval().eval(),
+            shoot: shoot.eval().eval(),
+        };
+        self.core.borrow_mut().push_command(command)
     }
 
     #[doc(alias = "targetp")]
-    pub fn shootp(&self, target: impl Eval<()>, shoot: impl Eval<Number>) {
-        todo!()
+    pub fn shootp<At: Target>(&self, at: impl Eval<At>, shoot: impl Eval<Number>) {
+        assert_same_core!(self, at, shoot);
+        let command = Control::Shootp {
+            of: (*self).eval(),
+            at: at.eval().eval(),
+            shoot: shoot.eval().eval(),
+        };
+        self.core.borrow_mut().push_command(command)
     }
 }
 
@@ -86,11 +129,37 @@ where
 
 impl<'a, T> Copy for Ref<'a, T> where T: Type {}
 
+impl<'a, T: Type> WithCore for Ref<'a, T> {
+    fn core(&self) -> Option<&Processor> {
+        Some(self.core)
+    }
+}
+
 impl<'a, T, U> Eval<U> for Ref<'a, T>
 where
     T: Eval<U> + Type,
 {
     fn eval(self) -> U {
         T::from_name(self.core.borrow()[self.idx].clone()).eval()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shoot() {
+        let processor = Processor::default();
+        let at_unit = processor.unit();
+        at_unit.target(processor.thisx(), processor.thisy(), true);
+
+        at_unit.save_as("awa");
+
+        let awa = processor.from_mdt::<Unit>("awa");
+
+        awa.set_to(at_unit);
+
+        dbg!(&processor.borrow().main);
     }
 }

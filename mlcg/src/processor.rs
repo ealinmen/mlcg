@@ -1,6 +1,12 @@
 use std::cell::RefCell;
 
-use crate::{command::Command, eval::Eval, r#ref::Ref, types::Type, String};
+use crate::{
+    command::Command,
+    eval::Eval,
+    r#ref::Ref,
+    types::{number::Number, Type},
+    String,
+};
 
 #[derive(Default)]
 pub struct Processor {
@@ -22,6 +28,30 @@ impl Processor {
             idx,
             _type: Default::default(),
         }
+    }
+
+    pub(crate) fn is_same_core(&self, rhs: &Self) -> bool {
+        (self as *const Processor).eq(&(rhs as _))
+    }
+
+    /// `@thisx` context variable
+    pub fn thisx(&self) -> Ref<'_, Number> {
+        self.make_ref(AT_THISX_IDX)
+    }
+
+    /// `@thisy` context variable
+    pub fn thisy(&self) -> Ref<'_, Number> {
+        self.make_ref(AT_THISY_IDX)
+    }
+
+    pub fn counter(&self) -> Ref<'_, Number> {
+        self.make_ref(AT_COUNTER_IDX)
+    }
+
+    pub fn from_mdt<T: Type>(&self, name: impl Eval<String>) -> Ref<'_, T> {
+        let name = name.eval();
+        let idx = self.borrow_mut().new_variable(name);
+        self.make_ref(idx)
     }
 }
 
@@ -51,6 +81,7 @@ impl RawProcessor {
     }
 }
 
+/// max to `2^60-1` (on x64)
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct VariableIdx(usize);
 
@@ -65,12 +96,18 @@ const TARGET_POINTER_WIDTH: usize = 64;
 #[cfg(target_pointer_width = "32")]
 const TARGET_POINTER_WIDTH: usize = 32;
 
-// there are some magic_number: @unit @counter @thisx @thisy @self...
+// there are some magic_number: @unit @counter @thisx @thisy @this...
 // 4 bit is kept for them
-pub(crate) const AT_UNIT_IDX: VariableIdx = VariableIdx(0b0000 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const AT_UNIT_IDX: VariableIdx = VariableIdx(0b0001 << (TARGET_POINTER_WIDTH - 4));
 pub(crate) const UNIT: String = String::Static("@unit");
-pub(crate) const AT_COUNT_IDX: VariableIdx = VariableIdx(0b0001 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const AT_COUNT_IDX: VariableIdx = VariableIdx(0b0010 << (TARGET_POINTER_WIDTH - 4));
 pub(crate) const COUNT: String = String::Static("@count");
+pub(crate) const AT_THISX_IDX: VariableIdx = VariableIdx(0b0011 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const THISX: String = String::Static("@thisx");
+pub(crate) const AT_THISY_IDX: VariableIdx = VariableIdx(0b0100 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const THISY: String = String::Static("@thisy");
+pub(crate) const AT_COUNTER_IDX: VariableIdx = VariableIdx(0b0101 << (TARGET_POINTER_WIDTH - 4));
+pub(crate) const COUNTER: String = String::Static("@counter");
 
 impl std::ops::Index<VariableIdx> for RawProcessor {
     type Output = String;
@@ -79,6 +116,9 @@ impl std::ops::Index<VariableIdx> for RawProcessor {
         match index {
             AT_UNIT_IDX => &UNIT,
             AT_COUNT_IDX => &COUNT,
+            AT_THISX_IDX => &THISX,
+            AT_THISY_IDX => &THISY,
+            AT_COUNTER_IDX => &COUNTER,
             _ => &self.variables[index.0],
         }
     }

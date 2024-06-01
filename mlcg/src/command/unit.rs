@@ -18,7 +18,10 @@ impl Processor {
         });
     }
 
-    pub fn unit<U: Units>(&self) -> Ref<'_, Unit<U>> {
+    /// # Note
+    ///
+    /// the `@unit` may is not binded yet
+    pub fn unit(&self) -> Ref<'_, Unit> {
         self.make_ref(AT_UNIT_IDX)
     }
 }
@@ -42,5 +45,22 @@ pub enum UnitControl {
         x: String,
         y: String,
         radius: String,
+    },
+    PathFind {
+        x: String,
+        y: String,
+    },
+    AutoPathFind,
+    Boost {
+        enable: String,
+    },
+    Target {
+        x: String,
+        y: String,
+        shoot: String,
+    },
+    Targetp {
+        at: String,
+        shoot: String,
     },
 }

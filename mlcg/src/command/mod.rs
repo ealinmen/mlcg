@@ -18,6 +18,7 @@ pub enum Command {
     DrawFlush(DrawFlush),
     PrintFlush(PrintFlush),
     GetLink(GetLink),
+    Control(Control),
 
     Set(Set),
     Operation(Operation),
@@ -67,6 +68,12 @@ mod froms {
     impl From<GetLink> for Command {
         fn from(v: GetLink) -> Self {
             Self::GetLink(v)
+        }
+    }
+
+    impl From<Control> for Command {
+        fn from(v: Control) -> Self {
+            Self::Control(v)
         }
     }
 

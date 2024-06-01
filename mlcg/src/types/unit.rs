@@ -1,23 +1,23 @@
 use crate::abilities::*;
 use crate::env::*;
+use crate::eval::Eval;
 use crate::String;
 use std::marker::PhantomData;
 
 use super::Type;
+mod inner {
+    use super::*;
 
-pub struct Unit<U: Units> {
-    pub name: String,
-    _unit: PhantomData<U>,
+    #[derive(Eval, Debug, Clone)]
+    pub struct Unit<U: Units> {
+        pub(crate) name: String,
+        pub(crate) _unit: PhantomData<U>,
+    }
 }
 
-impl<U: Units> Unit<U> {
-    pub(crate) fn new(name: String) -> Self {
-        Self {
-            name,
-            _unit: PhantomData,
-        }
-    }
+pub type Unit<U = Binding> = inner::Unit<U>;
 
+impl<U: Units> Unit<U> {
     pub fn class_name(&self) -> &'static str {
         U::class_name()
     }
@@ -25,9 +25,20 @@ impl<U: Units> Unit<U> {
 
 impl<U: Units> Type for Unit<U> {
     fn from_name(name: crate::String) -> Self {
-        Self::new(name)
+        Self {
+            name,
+            _unit: PhantomData,
+        }
     }
 }
+
+impl<U: Units> Eval<String> for Unit<U> {
+    fn eval(self) -> String {
+        self.name
+    }
+}
+
+impl<U: Units> Target for Unit<U> {}
 
 pub trait Units {
     fn class_name() -> &'static str;
@@ -80,6 +91,8 @@ macro_rules! units {
 }
 
 units! {
+    Binding  => "unit"     : Sepro, Erekir, Land, Air, Naval, Support, Legs, Tank, Flying, Neoplasm, Core, Internal && Shoot, Boost;
+
     Dagger   => "dagger"   : Sepro, Land, Attack && Shoot;
     Mace     => "mace"     : Sepro, Land, Attack && Shoot;
     Fortress => "fortress" : Sepro, Land, Attack && Shoot;

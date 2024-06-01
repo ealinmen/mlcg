@@ -8,23 +8,9 @@ pub enum Number {
     Variable(String),
 }
 
-impl Number {
-    fn remake(self) -> Self {
-        if let Self::Variable(name) = &self {
-            if let Ok(f) = name.parse::<f64>() {
-                return Self::Immediate(f);
-            }
-        }
-        self
-    }
-}
-
 impl Type for Number {
     fn from_name(name: String) -> Self {
-        match name.parse::<f64>() {
-            Ok(f) => Self::Immediate(f),
-            Err(_) => Self::Variable(name),
-        }
+        Self::Variable(name)
     }
 }
 
@@ -58,32 +44,45 @@ macro_rules! binary_ops_impl {
             fn $method(self, rhs: N) -> Self::Output {
                 use crate::command::*;
                 let processor = self.core;
+                let lhs: Number = self.eval();
+                let rhs: Number = rhs.eval();
+                let result = {
+                    let mut processor = processor.borrow_mut();
+                    let result = processor.alloc_name();
+                    processor.push_command(Operation::Binary {
+                        op: Op::$trait,
+                        result: result.clone(),
+                        lhs: lhs.eval(),
+                        rhs: rhs.eval(),
+                    });
+                    processor.new_variable(result)
+                };
+                processor.make_ref(result)
+            }
+        }
+        )*
+    };
+    ($($trait:ident($op:ident) => $method:ident,)*) => {
+        $(
+        impl<N> std::ops::$trait<N> for Ref<'_, Number>
+        where
+            N: Eval<Number>,
+        {
+            fn $method(&mut self, rhs: N){
+                use crate::command::*;
+                let processor = self.core;
 
-                let n1: Number = self.eval();
-                let n2: Number = rhs.eval();
-                match (n1.remake(), n2.remake()) {
-                    (Number::Immediate(a), Number::Immediate(b)) => {
-                        processor.make_ref(
-                            processor
-                                .borrow_mut()
-                                .new_variable(a.$method(b).to_string()),
-                        )
-                    }
-                    (l, r) => {
-                        let result = {
-                        let mut processor = processor.borrow_mut();
-                        let result = processor.alloc_name();
-                            processor.push_command(Operation::Binary {
-                                op: Op::$trait,
-                                result: result.clone(),
-                                lhs: l.eval(),
-                                rhs: r.eval(),
-                            });
-                            processor.new_variable(result)
-                        };
-                        processor.make_ref(result)
-                    }
-                }
+                let lhs: Number = self.eval();
+                let lhs: String = lhs.eval();
+                let rhs: Number = rhs.eval();
+
+                let mut processor = processor.borrow_mut();
+                processor.push_command(Operation::Binary {
+                    op: Op::$op,
+                    result: lhs.clone(),
+                    lhs: lhs.eval(),
+                    rhs: rhs.eval(),
+                });
             }
         }
         )*
@@ -98,6 +97,14 @@ binary_ops_impl! {
     Rem => rem,
 }
 
+binary_ops_impl! {
+    AddAssign(Add) => add_assign,
+    SubAssign(Sub) => sub_assign,
+    MulAssign(Mul) => mul_assign,
+    DivAssign(Div) => div_assign,
+    RemAssign(Rem) => rem_assign,
+}
+
 #[cfg(test)]
 mod tests {
     use crate::processor::Processor;
@@ -107,8 +114,8 @@ mod tests {
     #[test]
     fn operator() {
         let core = Processor::default();
-        let a: Ref<'_, Number> = core.make_ref(core.borrow_mut().new_variable("a"));
-        let b: Ref<'_, Number> = core.make_ref(core.borrow_mut().new_variable("b"));
+        let a = core.from_mdt::<Number>("a");
+        let b = core.from_mdt::<Number>("b");
 
         let c = a + b;
         let d = c + 114514;
@@ -116,6 +123,18 @@ mod tests {
         let _f = e + 1919.810;
 
         const EXPECTED: &str = r#"Block { commands: [Operation(Binary { op: Add, result: Rc("v0"), lhs: Static("a"), rhs: Static("b") }), Operation(Binary { op: Add, result: Rc("v1"), lhs: Rc("v0"), rhs: Rc("114514") }), Operation(Binary { op: Add, result: Rc("v2"), lhs: Rc("v1"), rhs: Rc("0") }), Operation(Binary { op: Add, result: Rc("v3"), lhs: Rc("v2"), rhs: Rc("1919.81") })] }"#;
-        assert_eq!(format!("{:?}", core.borrow().main), EXPECTED,);
+        assert_eq!(format!("{:?}", core.borrow().main), EXPECTED);
+    }
+
+    #[test]
+    fn operator_assign() {
+        let core = Processor::default();
+        let mut a = core.from_mdt("a");
+        let mut b = core.from_mdt("b");
+        a += b;
+        b += a;
+        let _c = a + b;
+        const EXPECTED: &str = r#"Block { commands: [Operation(Binary { op: Add, result: Static("a"), lhs: Static("a"), rhs: Static("b") }), Operation(Binary { op: Add, result: Static("b"), lhs: Static("b"), rhs: Static("a") }), Operation(Binary { op: Add, result: Rc("v0"), lhs: Static("a"), rhs: Static("b") })] }"#;
+        assert_eq!(format!("{:?}", core.borrow().main), EXPECTED);
     }
 }

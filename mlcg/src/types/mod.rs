@@ -1,7 +1,10 @@
+use crate::eval::Eval;
+use crate::String;
+
 pub mod building;
 pub mod number;
 pub mod unit;
 
-pub trait Type {
+pub trait Type: Eval<String> {
     fn from_name(name: crate::String) -> Self;
 }

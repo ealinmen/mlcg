@@ -47,12 +47,17 @@ macro_rules! binary_ops_impl {
                 let result = processor.new_unnamed();
                 let lhs: Number = self.eval();
                 let rhs: Number = rhs.eval();
-                processor.borrow_mut().push_command(op::Op {
-                    op: stringify!($method).eval(),
-                    result: result.eval(),
-                    lhs: lhs.eval(),
-                    rhs: rhs.eval(),
-                });
+                {
+                    let lhs: String = lhs.eval();
+                    let rhs: String = rhs.eval();
+                    let result = result.eval();
+                    processor.borrow_mut().push_command(op::Op {
+                        op: stringify!($method).eval(),
+                        result,
+                        lhs,
+                        rhs,
+                    });
+                }
                 result
             }
         }

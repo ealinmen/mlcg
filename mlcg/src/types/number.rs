@@ -44,20 +44,16 @@ macro_rules! binary_ops_impl {
             fn $method(self, rhs: N) -> Self::Output {
                 use crate::command::*;
                 let processor = self.core;
+                let result = processor.new_unnamed();
                 let lhs: Number = self.eval();
                 let rhs: Number = rhs.eval();
-                let result = {
-                    let mut processor = processor.borrow_mut();
-                    let result = processor.alloc_name();
-                    processor.push_command(op::Op {
-                        op: stringify!($method).eval(),
-                        result: result.clone(),
-                        lhs: lhs.eval(),
-                        rhs: rhs.eval(),
-                    });
-                    processor.new_variable(result)
-                };
-                processor.make_ref(result)
+                processor.borrow_mut().push_command(op::Op {
+                    op: stringify!($method).eval(),
+                    result: result.eval(),
+                    lhs: lhs.eval(),
+                    rhs: rhs.eval(),
+                });
+                result
             }
         }
         )*
@@ -121,6 +117,8 @@ mod tests {
         let d = c + 114514;
         let e = d + false;
         let _f = e + 1919.810;
+
+        core.write_to_stdout();
     }
 
     #[test]
@@ -131,5 +129,7 @@ mod tests {
         a += b;
         b += a;
         let _c = a + b;
+
+        core.write_to_stdout();
     }
 }

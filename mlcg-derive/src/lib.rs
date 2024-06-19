@@ -48,6 +48,15 @@ fn enum_template(
     let mut writes = quote::quote! {};
     let mut froms = quote::quote! {};
     let mut sub_commands = quote::quote! {};
+
+    let padding = map.get("padding").map(|padding| {
+        padding
+            .as_number()
+            .expect("invalid template: padding is not unsigned number")
+            .as_u64()
+            .expect("invalid template: padding is not unsigned integer")
+    });
+
     for (command, fields) in map {
         if command == "padding" {
             continue;
@@ -72,14 +81,6 @@ fn enum_template(
             }
         });
 
-        let padding = fields.get("padding").map(|padding| {
-            padding
-                .as_number()
-                .expect("invalid template: padding is not unsigned number")
-                .as_u64()
-                .expect("invalid template: padding is not unsigned integer")
-        });
-
         match fields {
             serde_json::Value::Array(fields) => {
                 sub_commands.extend(struct_template(command, fields, padding, depth + 1))
@@ -92,6 +93,12 @@ fn enum_template(
         }
     }
 
+    let self_write = if depth == 1 {
+        quote::quote! { write!(f, "{} ", #command)?; }
+    } else {
+        quote::quote! {}
+    };
+
     let define = quote::quote! {
         #[derive(Debug, Clone)]
         pub enum #enum_name {
@@ -100,6 +107,7 @@ fn enum_template(
 
         impl std::fmt::Display for #enum_name {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                #self_write
                 match self {
                     #writes
                 }
@@ -163,7 +171,6 @@ fn wrap_in_module(
     if depth == 1 {
         let mod_name = format_ident!("{}", command);
         quote::quote! {
-            #[allow(non_snake_case)]
             pub mod #mod_name {
                 #define
             }

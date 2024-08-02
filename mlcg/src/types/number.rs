@@ -1,6 +1,5 @@
-use crate::{eval::Eval, r#ref::Ref, String};
-
 use super::Type;
+use crate::{eval::Eval, r#ref::Ref, String};
 
 #[derive(Eval)]
 pub enum Number {

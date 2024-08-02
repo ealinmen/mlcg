@@ -1,5 +1,4 @@
-use std::marker::PhantomData;
-
+use super::{number::Number, Type};
 use crate::{
     abilities::{Shoot, Target},
     command,
@@ -7,8 +6,7 @@ use crate::{
     r#ref::Ref,
     String,
 };
-
-use super::{number::Number, Type};
+use std::marker::PhantomData;
 
 #[derive(Eval, Debug, Clone)]
 pub struct Building<B: Buildings = AnyBuilding> {

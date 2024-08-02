@@ -1,14 +1,14 @@
+use super::building::{Building, Buildings};
+use super::number::Number;
+use super::Type;
 use crate::abilities::*;
 use crate::command::ucontrol;
 use crate::env::*;
 use crate::eval::Eval;
+use crate::processor::Processor;
 use crate::r#ref::Ref;
 use crate::String;
 use std::marker::PhantomData;
-
-use super::building::{Building, Buildings};
-use super::number::Number;
-use super::Type;
 
 #[derive(Eval, Debug, Clone)]
 pub struct Unit<U: Units = Binding> {
@@ -43,11 +43,28 @@ pub trait Units {
     fn class_name() -> &'static str;
 }
 
+impl Processor {
+    pub fn unit_bind<U: Units>(&self) -> Ref<'_, Unit> {
+        self.borrow_mut()
+            .push_command(crate::command::ubind::Ubind {
+                ty: U::class_name().eval(),
+            });
+        self.unit()
+    }
+
+    pub fn bind<U: Units>(&self, unit: Ref<'_, Unit<U>>) -> Ref<'_, Unit> {
+        self.unit().set_to(unit.cast::<Unit>())
+    }
+}
+
 impl<'a, U: Units> Ref<'a, Unit<U>> {
     pub fn bind(&self) -> Ref<'a, Unit> {
-        let s = self.cast::<Unit>();
-        self.core.unit().set_to(s);
-        s
+        self.core.bind(*self)
+    }
+
+    pub fn cast_unit<U2: Units>(&self, unit: U2) -> Ref<'a, Unit<U2>> {
+        _ = unit;
+        self.cast()
     }
 }
 
@@ -60,7 +77,7 @@ impl<'a> Ref<'a, Unit> {
         self.ucontrol(ucontrol::Idle {});
     }
 
-    pub fn move_(&self, x: impl Eval<Number>, y: impl Eval<Number>) {
+    pub fn r#move(&self, x: impl Eval<Number>, y: impl Eval<Number>) {
         assert_same_core!(self, x, y);
         let command = ucontrol::Move {
             x: x.eval().eval(),
@@ -232,8 +249,8 @@ pub trait Internal: Units {}
 
 macro_rules! units {
     ($(
-        $unit:ident => $class:literal : $($trait: ident),+ && $($ability : ident),*
-    ;)*) => {$(
+        $unit:ident => $class:literal : $( $trait:ident ),+ && $( $ability:ident ),* ;
+    )*) => {$(
         pub struct $unit;
 
         impl Units for $unit {

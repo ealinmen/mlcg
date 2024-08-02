@@ -4,12 +4,7 @@ use crate::{
     command::Command,
     eval::Eval,
     r#ref::Ref,
-    types::{
-        building::Building,
-        number::Number,
-        unit::{Unit, Units},
-        Type,
-    },
+    types::{number::Number, unit::Unit, Type},
     String,
 };
 
@@ -52,63 +47,56 @@ impl Processor {
         (self as *const Processor).eq(&(rhs as _))
     }
 
-    pub fn unit_bind<U: Units>(&self) {
-        self.borrow_mut()
-            .push_command(crate::command::ubind::Ubind {
-                ty: U::class_name().eval(),
-            });
-    }
-
     /// # Note
     ///
-    /// the `@unit` may is not binded yet
+    /// the `@unit` may not binded yet
     pub fn unit(&self) -> Ref<'_, Unit> {
-        self.make_ref(AT_UNIT_IDX)
+        self.make_ref(VariableIdx::AT_UNIT_IDX)
     }
 
     /// `@thisx` process variable
     pub fn thisx(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_THISX_IDX)
+        self.make_ref(VariableIdx::AT_THISX_IDX)
     }
 
     /// `@thisy` process variable
     pub fn thisy(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_THISY_IDX)
+        self.make_ref(VariableIdx::AT_THISY_IDX)
     }
 
     /// `@counter` process variable
     pub fn counter(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_COUNTER_IDX)
+        self.make_ref(VariableIdx::AT_COUNTER_IDX)
     }
 
     /// `@links` process variable
     pub fn links(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_LINKS_IDX)
+        self.make_ref(VariableIdx::AT_LINKS_IDX)
     }
 
     /// `@ipt` process variable
     pub fn ipt(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_IPT_IDX)
+        self.make_ref(VariableIdx::AT_IPT_IDX)
     }
 
     /// `@time` process variable
     pub fn time(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_IPT_IDX)
+        self.make_ref(VariableIdx::AT_IPT_IDX)
     }
 
     /// `@tick` process variable
     pub fn tick(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_TICK_IDX)
+        self.make_ref(VariableIdx::AT_TICK_IDX)
     }
 
     /// `@mapw` process variable
     pub fn mapw(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_MAPW_IDX)
+        self.make_ref(VariableIdx::AT_MAPW_IDX)
     }
 
     /// `@maph` process variable
     pub fn maph(&self) -> Ref<'_, Number> {
-        self.make_ref(AT_MAPH_IDX)
+        self.make_ref(VariableIdx::AT_MAPH_IDX)
     }
 
     // pub fn linkeds(&self) -> impl Iterator<Item = (Ref<'_, Number>, Ref<'_, Building>)> {
@@ -146,13 +134,13 @@ pub(crate) struct RawProcessor {
     pub main: Block,
     pub appends: Vec<Block>,
     pub variables: Vec<String>,
-    pub alloc: usize,
+    pub seq: usize,
 }
 
 impl RawProcessor {
     pub(crate) fn alloc_name(&mut self) -> String {
-        let idx = self.alloc;
-        self.alloc += 1;
+        let idx = self.seq;
+        self.seq += 1;
         format!("v{}", idx).eval()
     }
 
@@ -176,26 +164,39 @@ impl RawProcessor {
                 buffer
             })
     }
-    pub(crate) fn context_variable(&self, idx: VariableIdx) -> Option<&String> {
+
+    pub(crate) const UNIT: String = String::Static("@unit");
+    pub(crate) const COUNT: String = String::Static("@count");
+    pub(crate) const THISX: String = String::Static("@thisx");
+    pub(crate) const THISY: String = String::Static("@thisy");
+    pub(crate) const COUNTER: String = String::Static("@counter");
+    pub(crate) const LINKS: String = String::Static("@links");
+    pub(crate) const IPT: String = String::Static("@ipt");
+    pub(crate) const TICK: String = String::Static("@tick");
+    pub(crate) const TIME: String = String::Static("@time");
+    pub(crate) const MAPW: String = String::Static("@mapw");
+    pub(crate) const MAPH: String = String::Static("@maph");
+
+    pub(crate) fn get_context_variable(&self, idx: VariableIdx) -> Option<&String> {
         let var = match idx {
-            AT_UNIT_IDX => &UNIT,
-            AT_COUNT_IDX => &COUNT,
-            AT_THISX_IDX => &THISX,
-            AT_THISY_IDX => &THISY,
-            AT_COUNTER_IDX => &COUNTER,
-            AT_LINKS_IDX => &LINKS,
-            AT_IPT_IDX => &IPT,
-            AT_TICK_IDX => &TICK,
-            AT_TIME_IDX => &TIME,
-            AT_MAPW_IDX => &MAPW,
-            AT_MAPH_IDX => &MAPH,
+            VariableIdx::AT_UNIT_IDX => &Self::UNIT,
+            VariableIdx::AT_COUNT_IDX => &Self::COUNT,
+            VariableIdx::AT_THISX_IDX => &Self::THISX,
+            VariableIdx::AT_THISY_IDX => &Self::THISY,
+            VariableIdx::AT_COUNTER_IDX => &Self::COUNTER,
+            VariableIdx::AT_LINKS_IDX => &Self::LINKS,
+            VariableIdx::AT_IPT_IDX => &Self::IPT,
+            VariableIdx::AT_TICK_IDX => &Self::TICK,
+            VariableIdx::AT_TIME_IDX => &Self::TIME,
+            VariableIdx::AT_MAPW_IDX => &Self::MAPW,
+            VariableIdx::AT_MAPH_IDX => &Self::MAPH,
             _ => return None,
         };
         Some(var)
     }
 
     pub(crate) fn get_variable(&self, idx: VariableIdx) -> &String {
-        match self.context_variable(idx) {
+        match self.get_context_variable(idx) {
             Some(var) => var,
             None => &self.variables[idx.0],
         }
@@ -216,31 +217,25 @@ impl From<usize> for VariableIdx {
 const TARGET_POINTER_WIDTH: usize = 64;
 #[cfg(target_pointer_width = "32")]
 const TARGET_POINTER_WIDTH: usize = 32;
+#[cfg(not(any(target_pointer_width = "64", target_pointer_width = "32")))]
+compile_error!("unsupported target_pointer_width ... or you can add it HERE");
 
-// there are some magic_number: @unit @counter @thisx @thisy @this...
-// 4 bit is kept for them
-pub(crate) const AT_UNIT_IDX: VariableIdx = VariableIdx(0b0001 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const UNIT: String = String::Static("@unit");
-pub(crate) const AT_COUNT_IDX: VariableIdx = VariableIdx(0b0010 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const COUNT: String = String::Static("@count");
-pub(crate) const AT_THISX_IDX: VariableIdx = VariableIdx(0b0011 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const THISX: String = String::Static("@thisx");
-pub(crate) const AT_THISY_IDX: VariableIdx = VariableIdx(0b0100 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const THISY: String = String::Static("@thisy");
-pub(crate) const AT_COUNTER_IDX: VariableIdx = VariableIdx(0b0101 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const COUNTER: String = String::Static("@counter");
-pub(crate) const AT_LINKS_IDX: VariableIdx = VariableIdx(0b0110 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const LINKS: String = String::Static("@links");
-pub(crate) const AT_IPT_IDX: VariableIdx = VariableIdx(0b0111 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const IPT: String = String::Static("@ipt");
-pub(crate) const AT_TICK_IDX: VariableIdx = VariableIdx(0b1000 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const TICK: String = String::Static("@tick");
-pub(crate) const AT_TIME_IDX: VariableIdx = VariableIdx(0b1001 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const TIME: String = String::Static("@time");
-pub(crate) const AT_MAPW_IDX: VariableIdx = VariableIdx(0b1010 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const MAPW: String = String::Static("@mapw");
-pub(crate) const AT_MAPH_IDX: VariableIdx = VariableIdx(0b1011 << (TARGET_POINTER_WIDTH - 4));
-pub(crate) const MAPH: String = String::Static("@maph");
+impl VariableIdx {
+    // there are some magic_number: @unit @counter @thisx @thisy @this...
+    // 4 bit is kept for them
+    pub(crate) const AT_UNIT_IDX: VariableIdx = VariableIdx(0b0001 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_COUNT_IDX: VariableIdx = VariableIdx(0b0010 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_THISX_IDX: VariableIdx = VariableIdx(0b0011 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_THISY_IDX: VariableIdx = VariableIdx(0b0100 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_COUNTER_IDX: VariableIdx =
+        VariableIdx(0b0101 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_LINKS_IDX: VariableIdx = VariableIdx(0b0110 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_IPT_IDX: VariableIdx = VariableIdx(0b0111 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_TICK_IDX: VariableIdx = VariableIdx(0b1000 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_TIME_IDX: VariableIdx = VariableIdx(0b1001 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_MAPW_IDX: VariableIdx = VariableIdx(0b1010 << (TARGET_POINTER_WIDTH - 4));
+    pub(crate) const AT_MAPH_IDX: VariableIdx = VariableIdx(0b1011 << (TARGET_POINTER_WIDTH - 4));
+}
 
 impl std::ops::Index<VariableIdx> for RawProcessor {
     type Output = String;

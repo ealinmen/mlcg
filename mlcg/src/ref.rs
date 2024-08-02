@@ -57,15 +57,16 @@ where
         self.core.make_ref(result)
     }
 
-    pub fn set_to(&self, value: impl Eval<T>) {
+    pub fn set_to(&self, value: impl Eval<T>) -> Self {
         let command = command::set::Set {
             result: self.core.borrow()[self.idx].clone(),
             value: value.eval().eval(),
         };
-        self.core.borrow_mut().push_command(command)
+        self.core.borrow_mut().push_command(command);
+        *self
     }
 
-    pub fn cast<T2: Type>(self) -> Ref<'a, T2> {
+    pub(crate) fn cast<T2: Type>(self) -> Ref<'a, T2> {
         Ref {
             core: self.core,
             idx: self.idx,
@@ -102,7 +103,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::types::unit::Unit;
+    use crate::types::unit::{Dagger, Unit};
 
     use super::*;
 
@@ -117,5 +118,14 @@ mod tests {
         awa.bind().target(core.thisx(), core.thisy(), true);
 
         core.write_to_stdout();
+    }
+
+    #[test]
+    fn rebind() {
+        let core = Processor::default();
+        // so many bind :D
+        let unit = core.unit_bind::<Dagger>().cast_unit(Dagger);
+        core.bind(unit).bind().bind().bind().bind().bind().bind();
+        unit.bind().bind().bind().bind().bind().bind().bind().bind();
     }
 }
